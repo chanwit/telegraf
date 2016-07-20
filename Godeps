@@ -10,7 +10,8 @@ github.com/couchbase/gomemcached a5ea6356f648fec6ab89add00edd09151455b4b2
 github.com/couchbase/goutils 5823a0cbaaa9008406021dc5daf80125ea30bba6
 github.com/dancannon/gorethink e7cac92ea2bc52638791a021f212145acfedb1fc
 github.com/davecgh/go-spew 5215b55f46b2b919f50a1df0eaa5886afe4e3b3d
-github.com/docker/engine-api 8924d6900370b4c7e7984be5adc61f50a80d7537
+github.com/docker/engine-api 55fc2a3c372dd40020d511a64926027a3051c677
+github.com/docker/distribution 857d0f15c0a4d8037175642e0ca3660829551cb5
 github.com/docker/go-connections f549a9393d05688dff0992ef3efd8bbe6c628aeb
 github.com/docker/go-units 5d2041e26a699eaca682e2ea41c8f891e1060444
 github.com/eapache/go-resiliency b86b1ec0dd4209a588dc1285cdd471e73525c0b3
