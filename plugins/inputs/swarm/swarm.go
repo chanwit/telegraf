@@ -101,7 +101,7 @@ func (s *Swarm) Gather(acc telegraf.Accumulator) error {
 	}
 
 	now := time.Now()
-	acc.AddFields("swarm", map[string]interface{}{"n_nodes": len(nodes)}, nil, now) //map[string]string{"unit": "bytes"}, now)
+
 	for _, node := range nodes {
 		nodeMap[node.ID] = node.Description.Hostname
 		acc.AddFields("swarm_node", map[string]interface{}{
@@ -132,8 +132,17 @@ func (s *Swarm) Gather(acc telegraf.Accumulator) error {
 			"node_id":      task.NodeID,
 			"node_name":    nodeMap[task.NodeID],
 			"image":        task.Spec.ContainerSpec.Image,
-		}, nil, now)
+		}, map[string]string{
+			"service_name": serviceMap[task.ServiceID],
+			"node_name": nodeMap[task.NodeID],
+		}, now)
 	}
+
+	acc.AddFields("swarm", map[string]interface{}{
+		"n_nodes": len(nodes),
+		"n_services": len(services),
+		"n_tasks": len(tasks),
+	}, nil, now)
 
 	return nil
 }
