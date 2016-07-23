@@ -15,6 +15,7 @@ import (
 
 	"github.com/docker/engine-api/client"
 	"github.com/docker/engine-api/types"
+	"github.com/docker/engine-api/types/swarm"
 	"github.com/influxdata/telegraf"
 	"github.com/influxdata/telegraf/internal"
 	"github.com/influxdata/telegraf/plugins/inputs"
@@ -105,11 +106,12 @@ func (s *Swarm) Gather(acc telegraf.Accumulator) error {
 	for _, node := range nodes {
 		nodeMap[node.ID] = node.Description.Hostname
 		acc.AddFields("swarm_node", map[string]interface{}{
-			"id":         node.ID,
-			"hostname":   node.Description.Hostname,
 			"cpu_shares": node.Description.Resources.NanoCPUs,
 			"memory":     node.Description.Resources.MemoryBytes,
-		}, nil, now) //map[string]string{"unit": "bytes"}, now)
+		}, map[string]string{
+			"node_id":       node.ID,
+			"node_hostname": node.Description.Hostname,
+		}, now) //map[string]string{"unit": "bytes"}, now)
 	}
 
 	services, err := s.client.ServiceList(ctx, types.ServiceListOptions{})
@@ -123,25 +125,57 @@ func (s *Swarm) Gather(acc telegraf.Accumulator) error {
 		return err
 	}
 
+	taskByService := make(map[string][]swarm.Task)
+	taskByStatus := make(map[string][]swarm.Task)
+	// taskByStatusByService := make(map[string]map[string][]*swarm.Task)
 	for _, task := range tasks {
+		status := string(task.Status.State)
+		grp, exist := taskByStatus[status]
+		if exist == false {
+			grp = []swarm.Task{}
+		}
+		grp = append(grp, task)
+		taskByStatus[status] = grp
+
+		service := serviceMap[task.ServiceID]
+		sgrp, exist := taskByService[service]
+		if exist == false {
+			sgrp = []swarm.Task{}
+		}
+		sgrp = append(sgrp, task)
+		taskByService[service] = sgrp
+
 		acc.AddFields("swarm_task", map[string]interface{}{
-			"id":           task.ID,
-			"service_id":   task.ServiceID,
-			"service_name": serviceMap[task.ServiceID],
-			"slot":         task.Slot,
-			"node_id":      task.NodeID,
-			"node_name":    nodeMap[task.NodeID],
-			"image":        task.Spec.ContainerSpec.Image,
+			"n_tasks": 1,
+			// "id":   task.ID,
+			// "slot": task.Slot,
 		}, map[string]string{
 			"service_name": serviceMap[task.ServiceID],
-			"node_name": nodeMap[task.NodeID],
+			"node_name":    nodeMap[task.NodeID],
+			"image":        task.Spec.ContainerSpec.Image,
+			"status":       string(task.Status.State),
+			"err":          task.Status.Err,
 		}, now)
 	}
 
+	for s, tt := range taskByStatus {
+		acc.AddFields("swarm_task_status", map[string]interface{}{
+			"n_tasks": len(tt),
+		}, map[string]string{
+			"status": s,
+		}, now)
+	}
+	/*
+		acc.AddFields("swarm_service", map[string]interface{}{
+		}, map[string]string{
+			"n_tasks": service.
+		}, now)
+	*/
+
 	acc.AddFields("swarm", map[string]interface{}{
-		"n_nodes": len(nodes),
+		"n_nodes":    len(nodes),
 		"n_services": len(services),
-		"n_tasks": len(tasks),
+		"n_tasks":    len(tasks),
 	}, nil, now)
 
 	return nil
